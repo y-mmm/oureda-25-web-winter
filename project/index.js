@@ -76,6 +76,83 @@ start();
  */
 function start() {
   // TODO
+  // 1. 初始化程序的运行状态 (因为初始化涉及读取文件是异步的，所以用 then 接续)
+  initialize().then(() => {
+    
+    // 2. 绑定实体键盘监听
+    document.addEventListener("keydown", (e) => {
+      if (state !== "UNFINISHED") return; // 游戏结束则停止交互
+      let key = e.key.toLowerCase();
+      handleInput(key);
+    });
+
+    // 3. 绑定屏幕虚拟键盘监听 (兼容你的 HTML 设计)
+    let virtualKeys = document.querySelectorAll(".key");
+    virtualKeys.forEach(btn => {
+      btn.addEventListener("click", function() {
+        if (state !== "UNFINISHED") return;
+        let key = this.innerText.toLowerCase();
+        if (key === "enter") key = "enter";
+        else if (key === "⌫" || key === "backspace") key = "backspace";
+        handleInput(key);
+      });
+    });
+
+    let hintBtn = document.getElementById("btn-hint");
+    if (hintBtn) {
+        hintBtn.addEventListener("click", () => {
+            alert("本局答案是 " + answer.toUpperCase());
+        });
+    }
+
+    let resetBtn = document.getElementById("btn-reset");
+    if (resetBtn) {
+        resetBtn.addEventListener("click", () => {
+            initialize().then(() => {
+                // 清空 HTML 棋盘
+                for (let i = 0; i < 30; i++) {
+                    let tile = document.getElementById("tile-" + i);
+                    if (tile) {
+                        tile.innerText = "";
+                        tile.className = "tile"; // 扒掉所有颜色
+                    }
+                }
+                // 清空虚拟键盘颜色
+                let allKeys = document.querySelectorAll(".key");
+                allKeys.forEach(k => k.classList.remove("correct", "present", "absent"));
+                
+                alert("棋盘已重置！");
+            });
+        });
+    }
+  });
+
+  // 内部辅助逻辑：处理输入的分发
+  function handleInput(key) {
+    if (/^[a-z]$/.test(key)) {
+      if (guess.length < answerLength) {
+        guess += key;
+        index++;
+        render(key);
+      }
+    } else if (key === "backspace") {
+      if (guess.length > 0) {
+        guess = guess.slice(0, -1);
+        index--;
+        render("backspace");
+      }
+    } else if (key === "enter") {
+      if (guess.length === answerLength) {
+        if (isValidWord(guess)) {
+          handleAnswer(guess);
+        } else {
+          alert("单词不在词库中 (Not in word list)");
+        }
+      } else {
+        alert("字母不够 (Not enough letters)");
+      }
+    }
+  }
 }
 
 /**
@@ -94,6 +171,64 @@ function start() {
  */
 function render(letter) {
   // TODO
+  // 1. 渲染当前正在输入的这一行
+  for (let i = 0; i < answerLength; i++) {
+    // 你的 HTML ID 是 tile-0 开始的
+    let tileId = "tile-" + (currentGuessTime * answerLength + i);
+    let tile = document.getElementById(tileId);
+    if (tile) {
+      let char = guess[i] ? guess[i].toUpperCase() : "";
+      tile.innerText = char;
+      
+      // 添加边框高亮效果
+      if (char !== "") tile.classList.add("filled");
+      else tile.classList.remove("filled");
+    }
+  }
+
+  // 2. 当按下回车，处理颜色和游戏结果的渲染
+  if (letter === "enter") {
+    let currentSeq = colorSequence[colorSequence.length - 1]; // 例如 "bggyy"
+    let rowStart = (currentGuessTime - 1) * answerLength; // handleAnswer 已经把次数+1了，所以要-1找回上一行
+
+    // 渲染格子颜色
+    for (let i = 0; i < answerLength; i++) {
+      let tile = document.getElementById("tile-" + (rowStart + i));
+      let colorCode = currentSeq[i];
+      if (tile) {
+        if (colorCode === green) tile.classList.add("correct");
+        else if (colorCode === yellow) tile.classList.add("present");
+        else if (colorCode === grey) tile.classList.add("absent");
+      }
+    }
+
+    let submittedWord = wordSequence[wordSequence.length - 1]; 
+    for (let i = 0; i < answerLength; i++) {
+      let char = submittedWord[i].toUpperCase();
+      let colorCode = currentSeq[i];
+      
+      let keyButtons = document.querySelectorAll(".key");
+      keyButtons.forEach(btn => {
+        if (btn.innerText.toUpperCase() === char) {
+            let className = colorCode === green ? "correct" : (colorCode === yellow ? "present" : "absent");
+            
+            // 颜色优先级判定：绿 > 黄 > 灰 (防止高级颜色被降级)
+            if (btn.classList.contains("correct")) return;
+            if (btn.classList.contains("present") && className === "absent") return;
+            
+            btn.classList.remove("correct", "present", "absent");
+            btn.classList.add(className);
+        }
+      });
+    }
+
+    // 渲染游戏结束状态
+    if (state === "SOLVED") {
+      setTimeout(() => alert("你猜对了！\n正确答案是：" + answer.toUpperCase()), 100);
+    } else if (state === "FAILED") {
+      setTimeout(() => alert("游戏结束！很遗憾，正确答案是：" + answer.toUpperCase()), 100);
+    }
+  }
 }
 
 /**
@@ -105,8 +240,18 @@ function render(letter) {
  * 1. 有哪些状态或变量需要被初始化
  * 2. 初始化时 state 变量处于怎样的状态
  */
-function initialize() {
+async function initialize() {
   // TODO
+  state = "UNFINISHED";
+  currentGuessTime = 0;
+  index = 1;
+  guess = "";
+  colorSequence = [];
+  wordSequence = [];
+  
+  // 生成随机答案，并存入全局变量
+  answer = await generateRandomAnswer();
+  console.log("本局答案是:", answer); // 方便测试
 }
 
 /**
@@ -124,6 +269,21 @@ function initialize() {
  */
 async function generateRandomAnswer() {
   // TODO
+  try {
+    // 读取 json 文件
+    const response = await fetch('words.json');
+    const data = await response.json(); // 拿到整个大对象
+    globalWordList = data.words; // ✅ 加上 .words，精准提取出里面的数组！
+    
+    // 随机抽取一个单词
+    const randomIndex = Math.floor(Math.random() * globalWordList.length);
+    return globalWordList[randomIndex].toLowerCase();
+  } catch (error) {
+    console.warn("⚠️ 无法读取 words.json，使用备用词库运行", error);
+    // 如果没有 json 文件，提供一个备用词库以防报错
+    globalWordList = ["apple", "world", "react", "super", "ghost"];
+    return globalWordList[0];
+  }
 }
 
 /**
@@ -142,6 +302,14 @@ async function generateRandomAnswer() {
  */
 function isValidWord(word) {
   // TODO
+  if (word.length !== answerLength) return false;
+  
+  // 规则2：必须在词库 json 中存在
+  if (globalWordList && globalWordList.length > 0) {
+    return globalWordList.includes(word.toLowerCase());
+  }
+  
+  return true;
 }
 
 /**
@@ -154,8 +322,28 @@ function isValidWord(word) {
  *
  * @param {string} guess
  */
-function handleAnswer(guess) {
+function handleAnswer(currentGuess) {
   // TODO
+  // 1. 计算颜色序列
+  let seq = calculateColorSequence(guess.toLowerCase(), answer.toLowerCase());
+  
+  // 2. 存入历史记录
+  colorSequence.push(seq);
+  wordSequence.push(currentGuess);
+
+  // 3. 判断状态变化
+  if (guess.toLowerCase() === answer.toLowerCase()) {
+    state = "SOLVED";
+  } else if (currentGuessTime >= maxGuessTime - 1) {
+    state = "FAILED";
+  }
+  guess = "";
+  // 4. 更新回合数并渲染
+  currentGuessTime++;
+  render("enter");
+  
+  // 5. 清空当前猜测，准备下一行
+  guess = "";
 }
 
 /**
@@ -178,4 +366,27 @@ function handleAnswer(guess) {
  */
 function calculateColorSequence(guess, answer) {
   // TODO
+  let guessArr = guess.split("");
+  let answerArr = answer.split("");
+  let colors = [grey, grey, grey, grey, grey]; // 默认全灰 (g)
+
+  // 第一遍扫描：找绝对位置正确的绿色 (b)
+  for (let i = 0; i < answerLength; i++) {
+    if (guessArr[i] === answerArr[i]) {
+      colors[i] = green;
+      answerArr[i] = null; // 消耗掉该字母
+      guessArr[i] = null;
+    }
+  }
+
+  // 第二遍扫描：找位置不对但存在的黄色 (y)
+  for (let i = 0; i < answerLength; i++) {
+    if (guessArr[i] !== null && answerArr.includes(guessArr[i])) {
+      colors[i] = yellow;
+      answerArr[answerArr.indexOf(guessArr[i])] = null; // 消耗掉该字母
+    }
+  }
+
+  // 将数组拼接成字符串返回
+  return colors.join("");
 }

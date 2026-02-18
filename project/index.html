@@ -4,8 +4,78 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wordle</title>
+    <link rel="stylesheet" href="index.css">
 </head>
 <body>
     <!-- 请在此文件中给出你的 html 代码并引入同目录下的 css 和 js 文件来实现样式和逻辑功能 -->
+    <header>
+        <div class="menu-icon">
+            <img src="/Wordle/img/left.png" alt="菜单" class="icon-btn" id="menu-btn">
+        </div>
+                
+        <div class="right-icons">
+          <a href="https://www.nytimes.com/2026/02/17/crosswords/wordle-review-1705.html" target="_blank" rel="noopener">
+            <img src="./img/help.jpg" alt="帮助" class="icon-btn" id="help-btn">
+          </a>
+          <img src="./img/stats.jpg" alt="统计" class="icon-btn" id="stats-btn">
+          <img src="./img/aa.jpg" alt="帮助2" class="icon-btn" id="help-btn2">
+          <img src="./img/setting.jpg" alt="设置" class="icon-btn" id="settings-btn">
+        </div>
+    </header>
+
+    <div id="game-container">
+      <div id="board">
+          <div class="tile" id="tile-0"></div><div class="tile" id="tile-1"></div><div class="tile" id="tile-2"></div><div class="tile" id="tile-3"></div><div class="tile" id="tile-4"></div>
+          <div class="tile" id="tile-5"></div><div class="tile" id="tile-6"></div><div class="tile" id="tile-7"></div><div class="tile" id="tile-8"></div><div class="tile" id="tile-9"></div>
+          <div class="tile" id="tile-10"></div><div class="tile" id="tile-11"></div><div class="tile" id="tile-12"></div><div class="tile" id="tile-13"></div><div class="tile" id="tile-14"></div>
+          <div class="tile" id="tile-15"></div><div class="tile" id="tile-16"></div><div class="tile" id="tile-17"></div><div class="tile" id="tile-18"></div><div class="tile" id="tile-19"></div>
+          <div class="tile" id="tile-20"></div><div class="tile" id="tile-21"></div><div class="tile" id="tile-22"></div><div class="tile" id="tile-23"></div><div class="tile" id="tile-24"></div>
+          <div class="tile" id="tile-25"></div><div class="tile" id="tile-26"></div><div class="tile" id="tile-27"></div><div class="tile" id="tile-28"></div><div class="tile" id="tile-29"></div>
+      </div>
+
+      <div id="keyboard">
+          <div class="keyboard-row">
+              <button class="key">Q</button><button class="key">W</button><button class="key">E</button><button class="key">R</button><button class="key">T</button><button class="key">Y</button><button class="key">U</button><button class="key">I</button><button class="key">O</button><button class="key">P</button>
+          </div>
+          <div class="keyboard-row">
+              <div class="spacer"></div>
+              <button class="key">A</button><button class="key">S</button><button class="key">D</button><button class="key">F</button><button class="key">G</button><button class="key">H</button><button class="key">J</button><button class="key">K</button><button class="key">L</button>
+              <div class="spacer"></div>
+          </div>
+          <div class="keyboard-row">
+              <button class="key wide-key">ENTER</button>
+              <button class="key">Z</button><button class="key">X</button><button class="key">C</button><button class="key">V</button><button class="key">B</button><button class="key">N</button><button class="key">M</button>
+              <button class="key wide-key">⌫</button>
+          </div>
+      </div>
+
+      </div> 
+
+      <footer>
+        <span>© 2026 The New York Times Company</span>
+        <span class="divider">|</span>
+        <a href="#">NYTimes.com</a>
+        <span class="divider">|</span>
+        <a href="#">Sitemap</a>
+        <span class="divider">|</span>
+        <a href="#">Privacy Policy</a>
+        <span class="divider">|</span>
+        <a href="#">Terms of Service</a>
+        <span class="divider">|</span>
+        <a href="#">Cookie Policy</a>
+        <span class="divider">|</span>
+        <a href="#">Terms of Sale</a>
+        <span class="divider">|</span>
+        <a href="#">Your Privacy Choices</a>
+      </footer>
+
+    </div> 
+
+    <div id="floating-tools">
+        <button id="btn-hint" class="float-btn">答案</button>
+        <button id="btn-reset" class="float-btn">重置</button>
+   </div>
+
+    <script src="index.js"></script>
 </body>
 </html>
