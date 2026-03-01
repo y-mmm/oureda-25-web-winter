@@ -3,11 +3,11 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;/* 字体设置,字体族 */
   background-color: #121213; 
   color: #ffffff;
   display: flex;
-  flex-direction: column;
+  flex-direction: column;/*子元素垂直竖着排*/
   height: 100vh; 
 }
 
@@ -148,7 +148,7 @@ footer a {
 
 
 
-/*  "pop" 动画 */
+/* 动画 */
 @keyframes pop {
   0%   { transform: scale(1); }     
   50%  { transform: scale(1.15); }  
@@ -156,7 +156,7 @@ footer a {
 }
 
 .filled {
-  animation: pop 0.15s ease-in-out; 
+  animation: pop 0.15s ease-in-out; /*动画在开始和结束时都比较缓慢，而中间过程稍快*/
   border-color: #565758 !important; 
 }
 
@@ -195,17 +195,17 @@ footer a {
   animation: shake 0.5s;
 }
 
-/* 右侧悬浮=== */
+/* 右侧悬浮 */
 #floating-tools {
-  position: fixed;
+  position: fixed;/*固定位置*/
   right: 20px;       
   bottom: 40px;      
   display: flex;
   flex-direction: column; 
   gap: 15px;        
-  z-index: 1000;     
+  z-index: 1000; /*层级顺序，确定在最上面*/ 
 }
-
+/* (静止状态) */
 .float-btn {
   background-color: #565758; 
   color: white;
@@ -215,15 +215,43 @@ footer a {
   height: 60px;
   font-size: 18px;
   font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s ease; 
+  cursor: pointer;/*当鼠标移上去时，箭头会变成手，暗示这里可以点*/
+  transition: all 0.2s ease; /*给变化加了个 0.2 秒的缓冲*/
 }
-
+/* (鼠标经过) */
 .float-btn:hover {
   background-color: #818384; 
-  transform: translateY(-2px); 
+  transform: translateY(-2px); /*按钮会向上*/
+}
+/* (鼠标点击那一刻) */
+.float-btn:active {
+  transform: scale(0.9); /*按钮会缩小一点点*/
 }
 
-.float-btn:active {
-  transform: scale(0.9); 
+/* 翻转动画定义 */
+@keyframes flip {
+  0% {
+    transform: rotateX(0);
+  }
+  45% {
+    transform: rotateX(90deg); /* 翻转到一半，水平侧向我们 */
+  }
+  55% {
+    transform: rotateX(90deg);
+  }
+  100% {
+    transform: rotateX(0); /* 翻转完成 */
+  }
+}
+
+/* 赋予动画属性 */
+.flip {
+  animation: flip 0.6s ease-in-out forwards;
+}
+
+/* 为了让翻转看起来更立体，给格子父容器加上透视感 */
+.tile {
+  /* 你原有的样式保留 */
+  backface-visibility: hidden; /* 翻转时隐藏背面 */
+  transition: background-color 0s 0.3s, border-color 0s 0.3s; /* 颜色在翻转到一半时切换 */
 }

@@ -22,6 +22,13 @@ const maxGuessTime = 6;
 
 // Wordle 中出现的三种颜色，更推荐使用枚举
 // 此处 green 用字母 b 表示，具体原因请参见代码任务
+// const Color = {
+//   GREY: "g",
+//   YELLOW: "y",
+//   GREEN: "b"
+// };
+//枚举版
+
 const grey = "g";
 const yellow = "y";
 const green = "b";
@@ -49,7 +56,12 @@ let index = 1;
  * 3. "FAILED": 表示当前 Wordle 解决失败
  * 可以根据需要设计新的状态
  */
-let state = "UNFINISHED";
+const GameState = Object.freeze({
+  PLAYING: "UNFINISHED",
+  WON: "SOLVED",
+  LOST: "FAILED"
+});
+let state = GameState.PLAYING;
 
 /**
  * 预定义的 JavaScript 程序的入口
@@ -67,21 +79,22 @@ start();
  * 2. 接收交互信息后改变内部状态并作出反馈
  *
  * 请思考：
- * 1. 在怎样的时刻需要调用 initialize 函数
- * 2. 程序的交互信息是什么（猜测的单词？）
- * 3. 内部状态会如何根据交互信息而改变（state 变量的作用？）
- * 4. 程序内部状态变化之后会作出怎样的反馈（页面重新渲染？）
- * 5. 如何读取交互信息
- * 6. 程序在什么时候会终止
+ * 1. 在怎样的时刻需要调用 initialize 函数  //初始化，游戏一加载，或者点“重置”按钮的时候
+ * 2. 程序的交互信息是什么（猜测的单词？）  //玩家输入的字母，或者回车，或者退格
+ * 3. 内部状态会如何根据交互信息而改变（state 变量的作用？）//猜中了变 SOLVED，机会用完变 FAILED，否则保持 UNFINISHED
+ * 4. 程序内部状态变化之后会作出怎样的反馈（页面重新渲染？）//格子变色了、跳出弹窗了、字母蹦出来了
+ * 5. 如何读取交互信息 //监听键盘按下的那个动作
+ * 6. 程序在什么时候会终止 //赢了、输了，或者关掉网页
  */
 function start() {
   // TODO
   // 1. 初始化程序的运行状态 (因为初始化涉及读取文件是异步的，所以用 then 接续)
   initialize().then(() => {
-    
+  // 执行初始化任务，等（then）你任务成功完成了，就请（=>）立刻开始做大括号（{）里的这些事
+
     // 2. 绑定实体键盘监听
     document.addEventListener("keydown", (e) => {
-      if (state !== "UNFINISHED") return; // 游戏结束则停止交互
+      if (state !== GameState.PLAYING) return; // 游戏结束则停止交互
       let key = e.key.toLowerCase();
       handleInput(key);
     });
@@ -90,7 +103,7 @@ function start() {
     let virtualKeys = document.querySelectorAll(".key");
     virtualKeys.forEach(btn => {
       btn.addEventListener("click", function() {
-        if (state !== "UNFINISHED") return;
+        if (state !== GameState.PLAYING) return;
         let key = this.innerText.toLowerCase();
         if (key === "enter") key = "enter";
         else if (key === "⌫" || key === "backspace") key = "backspace";
@@ -129,6 +142,7 @@ function start() {
 
   // 内部辅助逻辑：处理输入的分发
   function handleInput(key) {
+    //正则表达式
     if (/^[a-z]$/.test(key)) {
       if (guess.length < answerLength) {
         guess += key;
@@ -136,6 +150,8 @@ function start() {
         render(key);
       }
     } else if (key === "backspace") {
+      //guess储存已经输入的字母
+      //slice(0, -1) 的意思是：从开头开始，一直切到倒数第一个之前
       if (guess.length > 0) {
         guess = guess.slice(0, -1);
         index--;
@@ -146,10 +162,10 @@ function start() {
         if (isValidWord(guess)) {
           handleAnswer(guess);
         } else {
-          alert("单词不在词库中 (Not in word list)");
+          alert("单词不在词库中");
         }
       } else {
-        alert("字母不够 (Not enough letters)");
+        alert("字母不够");
       }
     }
   }
@@ -165,68 +181,73 @@ function start() {
  * 2. 当程序内部状态发生改变时需要重新渲染页面
  *
  * 请思考：
- * 1. 什么是 DOM，这项技术有怎样的作用
- * 2. 如何实现程序内部状态和 HTML 组件的绑定，为什么要这么设计
- * 3. 应该在怎样的时刻调用 render 函数
+ * 1. 什么是 DOM，这项技术有怎样的作用 //连接静态 HTML和动态 JS 逻辑
+ * 2. 如何实现程序内部状态和 HTML 组件的绑定，为什么要这么设计 //在HTML中起了唯一的ID，通过 DOM 抓取
+ * 3. 应该在怎样的时刻调用 render 函数 //状态改变时调用
  */
 function render(letter) {
-  // TODO
-  // 1. 渲染当前正在输入的这一行
+  // 1. 渲染当前正在输入的这一行 (保持不变)
   for (let i = 0; i < answerLength; i++) {
-    // 你的 HTML ID 是 tile-0 开始的
     let tileId = "tile-" + (currentGuessTime * answerLength + i);
     let tile = document.getElementById(tileId);
     if (tile) {
       let char = guess[i] ? guess[i].toUpperCase() : "";
       tile.innerText = char;
-      
-      // 添加边框高亮效果
       if (char !== "") tile.classList.add("filled");
       else tile.classList.remove("filled");
     }
   }
 
-  // 2. 当按下回车，处理颜色和游戏结果的渲染
+  // 2. 当按下回车，处理翻转动画和颜色同步
   if (letter === "enter") {
-    let currentSeq = colorSequence[colorSequence.length - 1]; // 例如 "bggyy"
-    let rowStart = (currentGuessTime - 1) * answerLength; // handleAnswer 已经把次数+1了，所以要-1找回上一行
+    let currentSeq = colorSequence[colorSequence.length - 1]; 
+    let submittedWord = wordSequence[wordSequence.length - 1];
+    let rowStart = (currentGuessTime - 1) * answerLength; 
 
-    // 渲染格子颜色
     for (let i = 0; i < answerLength; i++) {
       let tile = document.getElementById("tile-" + (rowStart + i));
       let colorCode = currentSeq[i];
-      if (tile) {
-        if (colorCode === green) tile.classList.add("correct");
-        else if (colorCode === yellow) tile.classList.add("present");
-        else if (colorCode === grey) tile.classList.add("absent");
-      }
-    }
-
-    let submittedWord = wordSequence[wordSequence.length - 1]; 
-    for (let i = 0; i < answerLength; i++) {
-      let char = submittedWord[i].toUpperCase();
-      let colorCode = currentSeq[i];
       
+      if (tile) {
+        // 顺序翻转效果
+        setTimeout(() => {
+          tile.classList.add("flip"); // 触发 CSS 翻转动画
+
+          // 在翻转到一半（0.25s）时，颜色换
+          setTimeout(() => {
+            if (colorCode === green) tile.classList.add("correct");
+            else if (colorCode === yellow) tile.classList.add("present");
+            else if (colorCode === grey) tile.classList.add("absent");
+          }, 250); 
+
+        }); // 每个格子比前一个延迟 150ms，形成波浪感
+      }
+
+      // 虚拟键盘同步变色
+      let char = submittedWord[i].toUpperCase();
       let keyButtons = document.querySelectorAll(".key");
       keyButtons.forEach(btn => {
         if (btn.innerText.toUpperCase() === char) {
+          setTimeout(() => {
             let className = colorCode === green ? "correct" : (colorCode === yellow ? "present" : "absent");
-            
-            // 颜色优先级判定：绿 > 黄 > 灰 (防止高级颜色被降级)
             if (btn.classList.contains("correct")) return;
             if (btn.classList.contains("present") && className === "absent") return;
-            
             btn.classList.remove("correct", "present", "absent");
             btn.classList.add(className);
+          }, i * 150 + 400); // 键盘变色稍晚于格子翻转
         }
       });
     }
 
     // 渲染游戏结束状态
-    if (state === "SOLVED") {
-      setTimeout(() => alert("你猜对了！\n正确答案是：" + answer.toUpperCase()), 100);
-    } else if (state === "FAILED") {
-      setTimeout(() => alert("游戏结束！很遗憾，正确答案是：" + answer.toUpperCase()), 100);
+    if (state !== GameState.PLAYING) {
+      setTimeout(() => {
+        if (state === "SOLVED") {
+          alert("你猜对了！\n正确答案是：" + answer.toUpperCase());
+        } else if (state === "FAILED") {
+          alert("游戏结束！很遗憾，正确答案是：" + answer.toUpperCase());
+        }
+      }, answerLength * 150 + 600); 
     }
   }
 }
@@ -241,8 +262,9 @@ function render(letter) {
  * 2. 初始化时 state 变量处于怎样的状态
  */
 async function initialize() {
+  // 使用 await，你必须先用 async 把这个函数声明为“异步函数”
   // TODO
-  state = "UNFINISHED";
+  state = GameState.PLAYING;
   currentGuessTime = 0;
   index = 1;
   guess = "";
@@ -251,6 +273,7 @@ async function initialize() {
   
   // 生成随机答案，并存入全局变量
   answer = await generateRandomAnswer();
+  // 等 generateRandomAnswer() 真正把单词从库里拿回来交到你手上，你才准往下一行跑
   console.log("本局答案是:", answer); // 方便测试
 }
 
@@ -262,8 +285,9 @@ async function initialize() {
  * 题库文件为 words.json
  *
  * 请思考：
- * 1. 如何读取 json 文件
- * 2. 如何随机抽取一个单词
+ * 1. 如何读取 json 文件 //fetch() 它就指定的 URL（words.json）把数据取回来，
+ *                  然后用 .json() 方法把包裹拆开，转换成 JavaScript 能看懂的数组。
+ * 2. 如何随机抽取一个单词  //利用Math
  *
  * @return {string} answer
  */
@@ -273,16 +297,13 @@ async function generateRandomAnswer() {
     // 读取 json 文件
     const response = await fetch('words.json');
     const data = await response.json(); // 拿到整个大对象
-    globalWordList = data.words; // ✅ 加上 .words，精准提取出里面的数组！
+    globalWordList = data.words; 
     
     // 随机抽取一个单词
     const randomIndex = Math.floor(Math.random() * globalWordList.length);
     return globalWordList[randomIndex].toLowerCase();
   } catch (error) {
-    console.warn("⚠️ 无法读取 words.json，使用备用词库运行", error);
-    // 如果没有 json 文件，提供一个备用词库以防报错
-    globalWordList = ["apple", "world", "react", "super", "ghost"];
-    return globalWordList[0];
+    console.warn("无法读取 words.json", error);
   }
 }
 
@@ -292,19 +313,21 @@ async function generateRandomAnswer() {
  * 判断一个单词是否合法
  *
  * 请思考：
- * 1. 判断一个单词是否合法的规则有哪些
+ * 1. 判断一个单词是否合法的规则有哪些  //5 个字母，必须在词库里，a-z 组成（虚拟键盘只能输入a-z，故不用）
  * 2. 是否存在多条判断规则
  * 3. 如果上条成立，那么这些规则执行的先后顺序是怎样的，不同的执行顺序是否会对单词的合法性判断造成影响
- * 4. 如果单词不合法，那么程序的状态会如何变化，程序应当作出怎样的反馈
+ *   //长度，词库
+ * 4. 如果单词不合法，那么程序的状态会如何变化，程序应当作出怎样的反馈  //弹出一个提示
  *
  * @param {string} word
  * @return {boolean} isValid
  */
 function isValidWord(word) {
   // TODO
+  // 长度
   if (word.length !== answerLength) return false;
   
-  // 规则2：必须在词库 json 中存在
+  // 必须在词库中存在
   if (globalWordList && globalWordList.length > 0) {
     return globalWordList.includes(word.toLowerCase());
   }
@@ -318,7 +341,7 @@ function isValidWord(word) {
  * 处理一次对单词的猜测，并根据其猜测结果更新程序内部状态
  *
  * 请思考：
- * 1. 是否需要对 guess 变量的字符串作某种预处理，为什么
+ * 1. 是否需要对 guess 变量的字符串作某种预处理，为什么 //统一大小写
  *
  * @param {string} guess
  */
