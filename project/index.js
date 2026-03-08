@@ -99,7 +99,7 @@ function start() {
       handleInput(key);
     });
 
-    // 3. 绑定屏幕虚拟键盘监听 (兼容你的 HTML 设计)
+    // 3. 绑定屏幕虚拟键盘监听
     let virtualKeys = document.querySelectorAll(".key");
     virtualKeys.forEach(btn => {
       btn.addEventListener("click", function() {
